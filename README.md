@@ -1,0 +1,1 @@
+This Repo will be used to train image segmentaion model on a UNET style Architecture using pytorch
