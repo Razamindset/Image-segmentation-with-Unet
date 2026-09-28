@@ -8,6 +8,7 @@ __pycache__/
 *.pt
 *.ckpt
 *.onnx
+checkpoints/
 
 # Datasets and Large Data Directories
 data/

@@ -7,19 +7,11 @@ A modular, clean PyTorch implementation of the classic **U-Net** architecture fo
 
 The U-Net architecture follows an encoder-decoder "U"-shaped structure comprising a contracting path (encoder), a bottleneck, and an expanding path (decoder), linked via long skip connections that preserve high-resolution spatial details.
 
-```
-Input Image (3 x 256 x 256)
-      │
-   [Enc 1] ─── (64 x 256 x 256 Skip 1) ──────────────────────────► [Dec 1] ───► Conv 1x1 ───► Output (1 x 256 x 256)
-      │ MaxPool                                                       ▲
-   [Enc 2] ─── (128 x 128 x 128 Skip 2) ───────────► [Dec 2] ─────────┘
-      │ MaxPool                                         ▲
-   [Enc 3] ─── (256 x 64 x 64 Skip 3) ──► [Dec 3] ──────┘
-      │ MaxPool                             ▲
-   [Enc 4] ─── (512 x 32 x 32 Skip 4) ─► [Dec 4]
-      │ MaxPool                            ▲
- [Bottleneck] (1024 x 16 x 16) ────────────┘
-```
+<p align="center">
+  <img src="assets/unet_architecture.png" alt="U-Net Architecture Diagram" width="850"/><br/>
+  <em>Figure 1: U-Net Architecture (adapted from Ronneberger et al., 2015).</em>
+</p>
+
 
 ### Architectural Components
 
@@ -95,24 +87,31 @@ Assuming a standard batch input of shape `[B, 3, 256, 256]`:
 
 ### Training Configuration (`config.py` & `train.py`)
 - **Loss Function**: `nn.BCEWithLogitsLoss()` (combines Sigmoid layer and binary cross-entropy for numerical stability).
-- **Optimizer**: `torch.optim.AdamW` with learning rate $\eta = 10^{-4}$.
+- **Optimizer**: `torch.optim.Adam` with learning rate $\eta = 10^{-4}$.
 - **Batch Size**: 16.
 - **Epochs**: 5.
-- **Train/Val Split**: 87% train / 13% validation.
-- **Checkpointing**: Weights saved to `unet_pet_segmentation.pth` upon completion.
+- **Train/Val Split**: 80% train / 20% validation (reproducible seed 42).
+- **Multi-Environment Support**: Easily switchable paths in `config.py` for Local, Google Colab (with Google Drive persistence), and Kaggle.
+- **Checkpointing & Recovery**:
+  - `last_checkpoint.pth`: Full state dictionary (model, optimizer, epoch, losses) saved every epoch for crash/disconnection recovery.
+  - `best_model.pth`: Saved whenever validation loss improves.
+  - `unet_pet_segmentation_final.pth`: Clean weights-only model state saved upon training completion.
 
 ---
 
 ## Repository Structure
 
 ```
-├── config.py          # Training hyperparameters (batch size, learning rate, epochs)
+├── .gitignore         # Ignores large datasets (data/), checkpoints, virtualenvs, caches
+├── requirements.txt   # Core project dependencies (torch, torchvision, numpy, etc.)
+├── config.py          # Environment paths (Local/Colab/Kaggle), checkpoint & train hyperparams
 ├── dataset.py         # PyTorch Dataset implementation for Oxford-IIIT Pet & mask binarization
 ├── double_conv.py     # Double Conv2D + BatchNorm2D + ReLU module
 ├── encoder.py         # Encoder block (DoubleConv + MaxPool2d)
 ├── decoder.py         # Decoder block (ConvTranspose2d + concat + DoubleConv)
 ├── model.py           # Full U-Net architecture assembly & forward pass
-├── train.py           # Dataset split, training & validation loops, model checkpointing
+├── train.py           # Checkpointing, resumption, training & validation loops
+├── predict.py         # Inference script for single images or dataset samples with visualizations
 └── README.md          # Architectural specifications and documentation
 ```
 
@@ -139,4 +138,14 @@ python dataset.py
 ### 3. Train the Model
 ```bash
 python train.py
+```
+
+### 4. Run Inference & Generate Visualizations
+Run inference on a custom image or a sample from the dataset:
+```bash
+# Infer on a custom image:
+python predict.py --image path/to/cat_or_dog.jpg --output prediction.png
+
+# Infer on a dataset sample with ground truth comparison:
+python predict.py --sample_index 0 --output sample_prediction.png
 ```
