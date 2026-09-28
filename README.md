@@ -9,7 +9,8 @@ The U-Net architecture follows an encoder-decoder "U"-shaped structure comprisin
 
 <p align="center">
   <img src="assets/unet_architecture.png" alt="U-Net Architecture Diagram" width="850"/><br/>
-  <em>Figure 1: U-Net Architecture (adapted from Ronneberger et al., 2015).</em>
+  <em>Figure 1: U-Net Architecture (From Ronneberger et al., 2015) as example.</em>
+  <a href="https://arxiv.org/pdf/1505.04597">Origional Paper</a>
 </p>
 
 
@@ -17,40 +18,15 @@ The U-Net architecture follows an encoder-decoder "U"-shaped structure comprisin
 
 The model is modularized into distinct building blocks across dedicated files:
 
-#### 1. Double Convolution Block (`double_conv.py`)
-- **Class**: `DoubleConv(in_channels, out_channels)`
-- **Structure**:
-  - `Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False)`
-  - `BatchNorm2d(out_channels)`
-  - `ReLU(inplace=True)`
-  - `Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False)`
-  - `BatchNorm2d(out_channels)`
-  - `ReLU(inplace=True)`
-- **Purpose**: Cascading two $3\times3$ convolutions achieves an effective receptive field of $5\times5$ with fewer parameters and richer non-linearities. Using `padding=1` keeps the spatial dimensions intact throughout each block, avoiding the cropping needed in the original 2015 U-Net paper. `bias=False` is used because Batch Normalization absorbs the bias shift.
+1. Double Convolution Block (`double_conv.py`)
 
-#### 2. Contracting / Encoder Block (`encoder.py`)
-- **Class**: `EncoderBlock(in_channels, out_channels)`
-- **Structure**:
-  - `conv = DoubleConv(in_channels, out_channels)`
-  - `pool = MaxPool2d(kernel_size=2, stride=2)`
-- **Outputs**:
-  - `skip_connection`: Feature map after `DoubleConv` (retained for the corresponding decoder level).
-  - `out`: Spatial downsampled feature map via $2\times2$ max pooling ($H/2, W/2$).
+2. Contracting / Encoder Block (`encoder.py`)
 
-#### 3. Bottleneck (`model.py`)
-- **Component**: `DoubleConv(512, 1024)`
-- **Purpose**: Connects the deepest encoder stage to the first decoder stage at the lowest spatial resolution ($16\times16$ for $256\times256$ inputs) with the highest feature representation (1024 channels).
+3. Bottleneck (`model.py`)
 
-#### 4. Expanding / Decoder Block (`decoder.py`)
-- **Class**: `DecoderBlock(in_channels, out_channels)`
-- **Structure**:
-  - `up = ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2)`: Upsamples spatial dimensions $2\times$ and halves channel count.
-  - `torch.concat([x, skip], dim=1)`: Concatenates upsampled features with the corresponding encoder skip connection along the channel axis. Resulting channels = `out_channels * 2`.
-  - `conv = DoubleConv(out_channels * 2, out_channels)`: Fuses and refines concatenated semantic and spatial features back to `out_channels`.
+4. Expanding / Decoder Block (`decoder.py`)
 
-#### 5. Output Head (`model.py`)
-- **Component**: `Conv2d(64, out_channels=1, kernel_size=1)`
-- **Purpose**: A point-wise $1\times1$ convolution that maps the final 64 feature channels down to the target class count (default 1 for binary segmentation logits).
+5. Output Head (`model.py`)
 
 ---
 
