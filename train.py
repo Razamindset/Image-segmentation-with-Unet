@@ -6,14 +6,14 @@ from torch.utils.data import DataLoader, random_split
 from model import UNet
 from dataset import PetDataset
 from metrics import dice_score, iou_score
-from config import *
 import matplotlib.pyplot as plt
+from config import *
 
 
 def plot_history(history, out_dir):
     epochs = range(1, len(history["train_loss"]) + 1)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
- 
+
     ax1.plot(epochs, history["train_loss"], marker="o", label="train")
     ax1.plot(epochs, history["val_loss"], marker="o", label="val")
     ax1.set_title("Loss (BCE)")
@@ -21,7 +21,7 @@ def plot_history(history, out_dir):
     ax1.set_ylabel("Loss")
     ax1.grid(alpha=0.3)
     ax1.legend()
- 
+
     ax2.plot(epochs, history["val_dice"], marker="o", label="Dice")
     ax2.plot(epochs, history["val_iou"], marker="o", label="IoU")
     ax2.set_title("Validation metrics")
@@ -30,13 +30,13 @@ def plot_history(history, out_dir):
     ax2.set_ylim(0, 1)
     ax2.grid(alpha=0.3)
     ax2.legend()
- 
+
     fig.tight_layout()
     path = os.path.join(out_dir, "training_curves.png")
     fig.savefig(path, dpi=150)
     plt.close(fig)
     print(f"Training curves saved to: '{path}'")
- 
+
 
 def train_model():
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -51,7 +51,7 @@ def train_model():
     train_dataset, val_dataset = random_split(
         full_dataset,
         [train_size, val_size],
-        generator=torch.Generator().manual_seed(SEED),  # positional, not seed=SEED
+        generator=torch.Generator().manual_seed(SEED),
     )
 
     train_loader = DataLoader(
@@ -64,8 +64,13 @@ def train_model():
     )
     print(f"Training samples: {len(train_dataset)} | Validation samples: {len(val_dataset)}")
 
-    # Model, loss, optimizer
+    # Model
     model = UNet(in_channels=3, out_channels=1).to(DEVICE)
+    raw_model = model
+    if torch.cuda.device_count() > 1:
+        print(f"Using {torch.cuda.device_count()} GPUs")
+        model = nn.DataParallel(model)
+
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 
@@ -79,11 +84,11 @@ def train_model():
 
         checkpoint = torch.load(CHECKPOINT_PATH, map_location=DEVICE)
 
-        model.load_state_dict(checkpoint["model_state_dict"])
+        raw_model.load_state_dict(checkpoint["model_state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         start_epoch = checkpoint["epoch"]
         best_val_loss = checkpoint.get("best_val_loss", float("inf"))
-        history = checkpoint.get("history", history)  # old checkpoints have no history
+        history = checkpoint.get("history", history)
 
         print(f"[INFO] Resumed from epoch {start_epoch} (Best Val Loss: {best_val_loss:.4f})\n")
     else:
@@ -112,7 +117,7 @@ def train_model():
 
         avg_train_loss = running_train_loss / train_samples
 
-        # validation
+        # validation 
         model.eval()
         running_val_loss = 0.0
         running_val_dice = 0.0
@@ -136,7 +141,7 @@ def train_model():
         avg_val_dice = running_val_dice / val_samples
         avg_val_iou = running_val_iou / val_samples
 
-        # ---- record history ----
+        # record history
         history["train_loss"].append(avg_train_loss)
         history["val_loss"].append(avg_val_loss)
         history["val_dice"].append(avg_val_dice)
@@ -148,14 +153,14 @@ def train_model():
             f"Val Dice: {avg_val_dice:.4f} | Val IoU: {avg_val_iou:.4f}"
         )
 
-        # ---- checkpointing ----
+        # checkpointing
         is_best = avg_val_loss < best_val_loss
         if is_best:
-            best_val_loss = avg_val_loss  # update BEFORE building the dict
+            best_val_loss = avg_val_loss  
 
         checkpoint_data = {
             "epoch": epoch + 1,
-            "model_state_dict": model.state_dict(),
+            "model_state_dict": raw_model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "train_loss": avg_train_loss,
             "val_loss": avg_val_loss,
@@ -165,13 +170,13 @@ def train_model():
 
         if is_best:
             torch.save(checkpoint_data, BEST_MODEL_PATH)
-            print(f"  ⭐ Best model saved to '{BEST_MODEL_PATH}' (Val Loss: {best_val_loss:.4f})")
+            print(f"⭐ Best model saved to '{BEST_MODEL_PATH}' (Val Loss: {best_val_loss:.4f})")
 
         torch.save(checkpoint_data, CHECKPOINT_PATH)
 
     # Final weights
     final_model_path = os.path.join(CHECKPOINT_DIR, "unet_pet_segmentation_final.pth")
-    torch.save(model.state_dict(), final_model_path)
+    torch.save(raw_model.state_dict(), final_model_path)
 
     print("\nTraining completed.")
     print(f"Best Validation Loss: {best_val_loss:.4f}")
