@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, random_split
 from model import UNet
-from dataset import PetDataset
+from dataset import PetDataset, AugmentedDataset
 from metrics import dice_score, iou_score
 import matplotlib.pyplot as plt
 from config import *
@@ -53,6 +53,9 @@ def train_model():
         [train_size, val_size],
         generator=torch.Generator().manual_seed(SEED),
     )
+
+    # Add image augmentaiton to improve the model accuracy
+    train_dataset = AugmentedDataset(train_dataset)
 
     train_loader = DataLoader(
         train_dataset, batch_size=BATCH_SIZE, shuffle=True,

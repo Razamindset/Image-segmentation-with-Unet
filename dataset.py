@@ -2,8 +2,11 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as T
 import torchvision.datasets as datasets
+import torchvision.transforms.functional as TF
+from torchvision.transforms import ColorJitter
 import numpy as np
 from PIL import Image
+import random
 
 
 class PetDataset(Dataset):
@@ -41,6 +44,29 @@ class PetDataset(Dataset):
         # Convert mask to tensor of shape [1, H, W]
         mask = torch.tensor(binary_mask).unsqueeze(0)
 
+        return img, mask
+
+
+class AugmentedDataset(torch.utils.data.Dataset):
+    def __init__(self, base):
+        self.base = base
+        self.jitter = ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2)
+
+    def __len__(self):
+        return len(self.base)
+
+    def __getitem__(self, i):
+        img, mask = self.base[i]          # img [3,H,W] in 0..1, mask [1,H,W] in {0,1}
+
+        # geometric: SAME transform on image and mask
+        if random.random() < 0.5:
+            img, mask = TF.hflip(img), TF.hflip(mask)
+        angle = random.uniform(-15, 15)
+        img = TF.rotate(img, angle, interpolation=TF.InterpolationMode.BILINEAR)
+        mask = TF.rotate(mask, angle, interpolation=TF.InterpolationMode.NEAREST)
+
+        # photometric: image only, never the mask
+        img = self.jitter(img)
         return img, mask
 
 
