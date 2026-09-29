@@ -171,7 +171,7 @@ def main():
             print("No --image specified. Loading sample from dataset...")
 
         from dataset import PetDataset
-        dataset = PetDataset(root=DATA_DIR, split="trainval")
+        dataset = PetDataset(root=DATA_DIR, split="test")
         tensor_img, mask_tensor = dataset[args.sample_index]
 
         # Invert normalized tensor [3, H, W] to PIL Image for display
