@@ -7,6 +7,7 @@ from model import UNet
 from dataset import PetDataset, AugmentedDataset
 from metrics import dice_score, iou_score
 import matplotlib.pyplot as plt
+from losses import DiceLoss
 from config import *
 
 
@@ -36,6 +37,27 @@ def plot_history(history, out_dir):
     fig.savefig(path, dpi=150)
     plt.close(fig)
     print(f"Training curves saved to: '{path}'")
+
+
+
+# Choose one experiment: "bce" or "bce_dice"
+LOSS_MODE = "bce_dice"
+
+bce_criterion = nn.BCEWithLogitsLoss()
+dice_criterion = DiceLoss()
+
+
+def compute_loss(logits, masks):
+    bce = bce_criterion(logits, masks)
+
+    if LOSS_MODE == "bce":
+        return bce
+
+    if LOSS_MODE == "bce_dice":
+        dice = dice_criterion(logits, masks)
+        return bce + dice
+
+    raise ValueError(f"Unknown LOSS_MODE: {LOSS_MODE}")
 
 
 def train_model():
@@ -74,7 +96,6 @@ def train_model():
         print(f"Using {torch.cuda.device_count()} GPUs")
         model = nn.DataParallel(model)
 
-    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 
     # Resume logic
@@ -109,7 +130,7 @@ def train_model():
             batch_size = images.size(0)
 
             predictions = model(images)
-            loss = criterion(predictions, masks)
+            loss = compute_loss(predictions, masks)
 
             optimizer.zero_grad()
             loss.backward()
@@ -133,7 +154,7 @@ def train_model():
                 batch_size = images.size(0)
 
                 predictions = model(images)
-                loss = criterion(predictions, masks)
+                loss = compute_loss(predictions, masks)
 
                 running_val_loss += loss.item() * batch_size
                 running_val_dice += dice_score(predictions, masks).item() * batch_size
