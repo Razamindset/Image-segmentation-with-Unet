@@ -11,13 +11,20 @@ from losses import DiceLoss
 from config import *
 
 
+# Choose one experiment: "bce" or "bce_dice"
+LOSS_MODE = "bce_dice"
+
+bce_criterion = nn.BCEWithLogitsLoss()
+dice_criterion = DiceLoss()
+
+
 def plot_history(history, out_dir):
     epochs = range(1, len(history["train_loss"]) + 1)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
 
     ax1.plot(epochs, history["train_loss"], marker="o", label="train")
     ax1.plot(epochs, history["val_loss"], marker="o", label="val")
-    ax1.set_title("Loss (BCE)")
+    ax1.set_title(LOSS_MODE)
     ax1.set_xlabel("Epoch")
     ax1.set_ylabel("Loss")
     ax1.grid(alpha=0.3)
@@ -37,14 +44,6 @@ def plot_history(history, out_dir):
     fig.savefig(path, dpi=150)
     plt.close(fig)
     print(f"Training curves saved to: '{path}'")
-
-
-
-# Choose one experiment: "bce" or "bce_dice"
-LOSS_MODE = "bce_dice"
-
-bce_criterion = nn.BCEWithLogitsLoss()
-dice_criterion = DiceLoss()
 
 
 def compute_loss(logits, masks):
