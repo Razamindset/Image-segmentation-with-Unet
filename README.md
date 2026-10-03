@@ -47,13 +47,6 @@ Notes:
 </p>
 
 ### Prediction examples
-
-**Run 2**
-
-<p align="center">
-  <img src="results/run-2-test-examples.png" alt="Run 2 examples" width="700"/>
-</p>
-
 **Run 3**
 
 <p align="center">
