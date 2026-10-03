@@ -11,7 +11,7 @@ A clean, modular PyTorch implementation of **U-Net**, written from scratch and t
 
 ## Results
 
-Validation set: 20% of the `trainval` split (736 images), fixed with seed 42.
+Validation set: 20% of the `trainval` split (736 images).
 
 | Run | Loss | Augmentation | Train loss | Val loss | Val Dice | Val IoU |
 |---|---|---|---|---|---|---|
@@ -93,7 +93,7 @@ For a `[B, 3, 256, 256]` input, the output is `[B, 1, 256, 256]`.
 - **Optimizer:** AdamW, learning rate 1e-4.
 - **Batch size:** 16
 - **Epochs:** 40
-- **Split:** 80% train / 20% validation (seed 42).
+- **Split:** 80% train / 20% validation.
 - **Multi-environment support:** paths in `config.py` can be switched between Local, Google Colab and Kaggle.
 - **Checkpointing:**
   - `last_checkpoint.pth`: full state, saved every epoch so training can resume after a crash.
